@@ -60,9 +60,9 @@ const HomePage: React.FC = () => {
                             <a id="btn-hero-consultation" href="#book" className="btn btn-accent">
                                 Book a Site Inspection <Zap size={18} />
                             </a>
-                            <a id="btn-hero-explore" href="#systems" className="btn btn-outline">
+                            <Link id="btn-hero-explore" to="/solar-security-products" className="btn btn-outline">
                                 Explore Our Solutions <ChevronRight size={18} />
-                            </a>
+                            </Link>
                         </div>
                     </div>
                 </div>
@@ -114,12 +114,18 @@ const HomePage: React.FC = () => {
                                         <li key="cap"><BatteryCharging size={16} /> {product.capacity} System</li>
                                         <li key="desc"><Zap size={16} /> {product.headline.split("–")[1] || "Built for Energy Independence"}</li>
                                     </ul>
-                                    <Link id={`btn-solar-${product.id}`} to={product.slug} className="btn btn-accent w-full" style={{ width: '100%', marginTop: 'auto' }}>
+                                    <Link id={`btn-solar-${product.id}`} to={`/products${product.slug}`} className="btn btn-accent w-full" style={{ width: '100%', marginTop: 'auto' }}>
                                         View Full Details
                                     </Link>
                                 </div>
                             </div>
                         ))}
+                    </div>
+
+                    <div className="text-center mt-8 animate-up delay-2">
+                        <Link to="/solar-security-products" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', backgroundColor: '#0B1C2D' }}>
+                            View Complete Catalog <ChevronRight size={18} style={{ marginLeft: '0.5rem' }} />
+                        </Link>
                     </div>
                 </div>
             </section>

@@ -1,7 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { products } from '../data';
 import {
     ChevronLeft,
     CheckCircle,
@@ -13,61 +12,79 @@ import {
     Zap
 } from 'lucide-react';
 
+interface DynamicProduct {
+    product_name: string;
+    product_slug: string;
+    category: string;
+    price: string;
+    photo_url: string;
+    seo_description: string;
+    meta_title: string;
+    meta_description: string;
+    whatsapp_cta_link: string;
+    json_ld_schema: string;
+}
+
 const ProductPage: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
-    const product = products.find(p => p.slug === `/${slug}`) || products.find(p => p.slug.includes(slug || ''));
+    const [product, setProduct] = useState<DynamicProduct | null>(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         window.scrollTo(0, 0);
+        async function fetchProduct() {
+            try {
+                const res = await fetch('/products.json');
+                const data: DynamicProduct[] = await res.json();
+                const found = data.find(p => p.product_slug === slug);
+                setProduct(found || null);
+            } catch (err) {
+                console.error("Failed to load product:", err);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchProduct();
     }, [slug]);
+
+    if (loading) {
+        return (
+            <div className="container section text-center" style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                <h2>Loading Architecture...</h2>
+            </div>
+        );
+    }
 
     if (!product) {
         return (
             <div className="container section text-center" style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
                 <h2>Product Not Found</h2>
-                <Link id="link-back-home" to="/" className="btn btn-accent mt-4">Return Home</Link>
+                <Link id="link-back-catalog" to="/solar-security-products" className="btn btn-accent mt-4">Browse Catalog</Link>
             </div>
         );
     }
 
-    // Generate JSON-LD Schema
-    const structuredData = {
-        "@context": "https://schema.org/",
-        "@type": "Product",
-        "name": product.seoTitle,
-        "image": product.photoUrl,
-        "description": product.metaDescription,
-        "brand": {
-            "@type": "Brand",
-            "name": "Linos E' Security Ltd"
-        },
-        "offers": {
-            "@type": "Offer",
-            "priceCurrency": "NGN",
-            "price": product.priceStr.replace(/[^\d.]/g, ''),
-            "availability": "https://schema.org/InStock",
-            "url": `https://linosesecurity.com${product.slug}`
-        }
-    };
-
     return (
         <div className="font-sans text-gray-800 antialiased overflow-x-hidden">
             <Helmet>
-                <title>{product.seoTitle}</title>
-                <meta name="description" content={product.metaDescription} />
+                <title>{product.meta_title}</title>
+                <meta name="description" content={product.meta_description} />
+                <meta property="og:title" content={product.meta_title} />
+                <meta property="og:description" content={product.meta_description} />
+                <meta property="og:image" content={product.photo_url} />
                 <script type="application/ld+json">
-                    {JSON.stringify(structuredData)}
+                    {product.json_ld_schema}
                 </script>
             </Helmet>
 
             {/* Navigation */}
             <div className="container" style={{ paddingTop: '2rem' }}>
-                <Link id="link-back" to="/#systems" style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--color-text-muted)' }}>
-                    <ChevronLeft size={16} /> Back to Systems
+                <Link id="link-back" to="/solar-security-products" style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--color-text-muted)' }}>
+                    <ChevronLeft size={16} /> Back to Products
                 </Link>
             </div>
 
-            <section className="section">
+            <section className="section pb-8">
                 <div className="container">
                     {/* Main Product Display - 2 Columns */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '4rem', alignItems: 'start' }}>
@@ -75,7 +92,7 @@ const ProductPage: React.FC = () => {
                         {/* Visual Column */}
                         <div className="product-visual animate-up" style={{ position: 'sticky', top: '2rem' }}>
                             <div style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-hover)' }}>
-                                <img src={product.photoUrl} alt={`${product.capacity} hybrid solar inverter system installed in Nigeria`} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                                <img src={product.photo_url} alt={product.product_name} loading="lazy" style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'cover' }} />
                             </div>
 
                             {/* Trust Badges */}
@@ -93,67 +110,39 @@ const ProductPage: React.FC = () => {
 
                         {/* Content Column */}
                         <div className="product-details animate-up delay-1">
-                            <span className="label" style={{ color: 'var(--color-accent)' }}>{product.capacity} Premium System</span>
-                            <h1 style={{ fontSize: 'clamp(2rem, 3vw, 2.75rem)', marginBottom: '1rem', color: 'var(--color-primary)' }}>{product.headline}</h1>
+                            <span className="label" style={{ color: 'var(--color-accent)' }}>{product.category}</span>
+                            <h1 style={{ fontSize: 'clamp(2rem, 3vw, 2.75rem)', marginBottom: '1rem', color: 'var(--color-primary)' }}>{product.product_name}</h1>
+                            <p className="subtitle mb-6">{product.seo_description}</p>
 
                             <div style={{ background: 'var(--color-dark-surface)', color: 'white', padding: '1.5rem', borderRadius: 'var(--radius-md)', marginBottom: '2rem' }}>
                                 <div style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.5rem' }}>Full System Value</div>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--color-accent)' }}>{product.priceStr}</div>
+                                <div className="price" style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--color-accent)' }}>₦{product.price}</div>
                                 <div style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.9)', marginTop: '0.5rem' }}>
-                                    * Flexible installment options available.
+                                    * Professional deployment included.
                                 </div>
                             </div>
 
                             <div className="prose mb-4">
-                                <h3 style={{ marginBottom: '1rem' }}>Ideal For:</h3>
+                                <h3 style={{ marginBottom: '1rem' }}>Premium Inclusion:</h3>
                                 <ul className="product-features" style={{ marginBottom: '2rem' }}>
-                                    <li><CheckCircle size={18} style={{ color: 'var(--color-accent)' }} /> 2–4 bedroom homes or small offices</li>
                                     <li><CheckCircle size={18} style={{ color: 'var(--color-accent)' }} /> Combating grid instability & power outages</li>
-                                    <li><CheckCircle size={18} style={{ color: 'var(--color-accent)' }} /> Reducing fuel generator costs permanently</li>
-                                </ul>
-
-                                <h3 style={{ marginBottom: '1rem' }}>Key Specifications:</h3>
-                                <ul className="product-features" style={{ marginBottom: '2rem' }}>
-                                    {product.specs.map((spec, i) => (
-                                        <li key={i}><Zap size={18} style={{ color: 'var(--color-accent)' }} /> {spec}</li>
-                                    ))}
-                                    <li><Zap size={18} style={{ color: 'var(--color-accent)' }} /> Ultra-Silent Operation</li>
-                                    <li><Zap size={18} style={{ color: 'var(--color-accent)' }} /> Battery-ready Expansion Architecture</li>
-                                    <li><Zap size={18} style={{ color: 'var(--color-accent)' }} /> Long Lifecycle Durability</li>
+                                    <li><CheckCircle size={18} style={{ color: 'var(--color-accent)' }} /> Enterprise-Grade Hardware Lifecycle</li>
+                                    <li><CheckCircle size={18} style={{ color: 'var(--color-accent)' }} /> Expert Pre-Installation Audit</li>
                                 </ul>
                             </div>
 
                             {/* CTAs */}
                             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginTop: '2rem' }}>
-                                <a id="btn-request-install" href="#booking-form" className="btn btn-accent" style={{ flexGrow: 1 }}>
-                                    Request Installation <Calendar size={18} />
+                                <a id="btn-whatsapp" href={product.whatsapp_cta_link} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ flexGrow: 1, backgroundColor: '#25D366', color: 'white', fontSize: '1.1rem', padding: '1rem', justifyContent: 'center' }}>
+                                    Order on WhatsApp <MessageCircle size={20} />
                                 </a>
-                                <a id="btn-whatsapp" href="https://wa.me/2348000000000" target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ flexGrow: 1, backgroundColor: '#25D366', color: 'white' }}>
-                                    Quick WhatsApp Chat <MessageCircle size={18} />
+                                <a id="btn-request-install" href="#booking-form" className="btn btn-outline" style={{ flexGrow: 1, justifyContent: 'center' }}>
+                                    Request Inspection <Calendar size={18} />
                                 </a>
                             </div>
                         </div>
 
                     </div>
-                </div>
-            </section>
-
-            {/* Booking Form Section */}
-            <section id="booking-form" className="section" style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}>
-                <div className="container" style={{ maxWidth: '800px' }}>
-                    <div className="section-header text-center">
-                        <h2 style={{ color: 'white' }}>Get a Free Site Inspection</h2>
-                        <p style={{ color: 'rgba(255,255,255,0.8)' }}>Provide your details below and our elite engineering team will contact you to schedule.</p>
-                    </div>
-                    <form className="animate-up" onSubmit={(e) => e.preventDefault()} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <div style={{ display: 'flex', gap: '1rem' }}>
-                            <input type="text" placeholder="Full Name" style={{ flex: 1, padding: '1rem', borderRadius: 'var(--radius-sm)', border: 'none', width: '100%' }} />
-                            <input type="tel" placeholder="Phone Number" style={{ flex: 1, padding: '1rem', borderRadius: 'var(--radius-sm)', border: 'none', width: '100%' }} />
-                        </div>
-                        <input type="email" placeholder="Email Address" style={{ padding: '1rem', borderRadius: 'var(--radius-sm)', border: 'none', width: '100%' }} />
-                        <textarea placeholder="Property Address / Location" rows={3} style={{ padding: '1rem', borderRadius: 'var(--radius-sm)', border: 'none', width: '100%', fontFamily: 'inherit' }}></textarea>
-                        <button id="btn-submit-inspection" className="btn btn-accent" style={{ width: '100%', padding: '1.25rem' }}>Submit Request</button>
-                    </form>
                 </div>
             </section>
 
@@ -162,27 +151,25 @@ const ProductPage: React.FC = () => {
                 <div className="container text-center">
                     <h2>Client Experiences</h2>
                     <div className="glass-card" style={{ maxWidth: '800px', margin: '2rem auto', textAlign: 'left', fontStyle: 'italic' }}>
-                        <p>"{product.capacity} system was cleanly installed within 48 hours. The engineering team from Linos understood our load perfectly. We haven't turned on the generator since."</p>
-                        <div style={{ fontWeight: 'bold', marginTop: '1rem', color: 'var(--color-primary)' }}>— Chief Okafor, Verified Residential Client</div>
+                        <p>"{product.product_name} was securely installed within 48 hours. The engineering team from Linos understood our demands perfectly. Highly recommended."</p>
+                        <div style={{ fontWeight: 'bold', marginTop: '1rem', color: 'var(--color-primary)' }}>— Chief Okafor, Verified Client</div>
                     </div>
                 </div>
             </section>
 
-            {/* FAQ Accordion Placeholder */}
-            <section className="section">
+            {/* Booking Form Section */}
+            <section id="booking-form" className="section" style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}>
                 <div className="container" style={{ maxWidth: '800px' }}>
-                    <h2 className="text-center mb-4">Frequently Asked Questions</h2>
-                    {[
-                        "How long does the installation take?",
-                        "Can this system run my AC unit?",
-                        "What happens on cloudy days?",
-                        "Do you offer maintenance?"
-                    ].map((q, i) => (
-                        <div key={i} style={{ padding: '1.5rem', borderBottom: '1px solid rgba(0,0,0,0.1)', display: 'flex', justifyContent: 'space-between', cursor: 'pointer' }}>
-                            <strong style={{ color: 'var(--color-primary)' }}>{q}</strong>
-                            <ChevronDown size={20} style={{ color: 'var(--color-accent)' }} />
-                        </div>
-                    ))}
+                    <div className="section-header text-center">
+                        <h2 style={{ color: 'white' }}>Schedule an Audit</h2>
+                        <p style={{ color: 'rgba(255,255,255,0.8)' }}>Provide your details below and our elite team will secure your installation date.</p>
+                    </div>
+                    {/* Minimal form mock */}
+                    <form className="animate-up" onSubmit={(e) => e.preventDefault()} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <input type="text" placeholder="Full Name" style={{ padding: '1rem', borderRadius: 'var(--radius-sm)', border: 'none', width: '100%' }} />
+                        <input type="tel" placeholder="Phone Number" style={{ padding: '1rem', borderRadius: 'var(--radius-sm)', border: 'none', width: '100%' }} />
+                        <button id="btn-submit-inspection" className="btn btn-accent" style={{ width: '100%', padding: '1.25rem' }}>Secure Schedule</button>
+                    </form>
                 </div>
             </section>
 
